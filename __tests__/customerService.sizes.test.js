@@ -26,3 +26,39 @@ describe('customerService enabled size options', () => {
     ]);
   });
 });
+
+describe('customerService registered capital size synchronization', () => {
+  it('stores the size derived from registered capital instead of a stale supplied size ID', async () => {
+    const transaction = {
+      LOCK: { UPDATE: 'UPDATE' },
+      commit: jest.fn().mockResolvedValue(undefined),
+      rollback: jest.fn().mockResolvedValue(undefined),
+    };
+    const Customer = {
+      findOne: jest.fn().mockResolvedValue({
+        ID: 'customer-1',
+        TAX_NO: '1234567890123',
+      }),
+      update: jest.fn().mockResolvedValue([0]),
+      sequelize: {
+        fn: jest.fn((name) => ({ fn: name })),
+        transaction: jest.fn().mockResolvedValue(transaction),
+      },
+    };
+    const Size = { findOne: jest.fn().mockResolvedValue({ ID: '4b2d23db-96d6-4cef-b6ae-10a97a8ce1cb' }) };
+    getModels.mockReturnValue({ Customer, Size });
+
+    await customerService.updateCustomer('customer-1', {
+      REGISTERED_CAPITAL_AMOUNT: '1000000000',
+      SIZE_ID: 'd8ce72cf-0228-4293-9699-311eeecb926d',
+    }, 123);
+
+    expect(Size.findOne).toHaveBeenCalledWith({
+      where: { ID: '4b2d23db-96d6-4cef-b6ae-10a97a8ce1cb', ENABLED: '1' },
+    });
+    expect(Customer.update).toHaveBeenCalledWith(expect.objectContaining({
+      REGISTERED_CAPITAL_AMOUNT: 1000000000,
+      SIZE_ID: '4b2d23db-96d6-4cef-b6ae-10a97a8ce1cb',
+    }), expect.objectContaining({ transaction }));
+  });
+});

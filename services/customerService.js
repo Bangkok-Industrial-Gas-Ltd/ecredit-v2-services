@@ -8,6 +8,8 @@ const QUICK_FILTER_SIZE_IDS = {
   M: '9d9d84c7-8926-4629-b06f-2cb4d434fc33',
   L: '4b2d23db-96d6-4cef-b6ae-10a97a8ce1cb',
 };
+const MEDIUM_CUSTOMER_CAPITAL_MINIMUM = 50000000;
+const LARGE_CUSTOMER_CAPITAL_MINIMUM = 200000000;
 
 const SIZE_LABELS_BY_ID = {
   [QUICK_FILTER_SIZE_IDS.L]: 'L (>200)',
@@ -175,6 +177,12 @@ function buildAttributes() {
 function toNumber(value) {
   const number = Number(value);
   return Number.isFinite(number) ? number : 0;
+}
+
+function customerSizeIdForCapital(capitalAmount) {
+  if (capitalAmount < MEDIUM_CUSTOMER_CAPITAL_MINIMUM) return QUICK_FILTER_SIZE_IDS.S;
+  if (capitalAmount <= LARGE_CUSTOMER_CAPITAL_MINIMUM) return QUICK_FILTER_SIZE_IDS.M;
+  return QUICK_FILTER_SIZE_IDS.L;
 }
 
 function isNonBlank(value) {
@@ -373,6 +381,7 @@ function normalizeCustomerUpdate(payload) {
       throw validationError('REGISTERED_CAPITAL_AMOUNT must be a decimal with up to 4 decimal places.');
     }
     update.REGISTERED_CAPITAL_AMOUNT = capitalAmount;
+    update.SIZE_ID = customerSizeIdForCapital(capitalAmount);
   }
 
   return update;
