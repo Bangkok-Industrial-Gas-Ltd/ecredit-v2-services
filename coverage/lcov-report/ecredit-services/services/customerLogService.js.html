@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">9.47% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/95</span>
+                <span class='fraction'>9/95</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">2.19% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/91</span>
+                <span class='fraction'>2/91</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">6.66% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/15</span>
+                <span class='fraction'>1/15</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">9.09% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/88</span>
+                <span class='fraction'>8/88</span>
             </div>
         
             
@@ -348,13 +348,13 @@
 <a name='L283'></a><a href='#L283'>283</a>
 <a name='L284'></a><a href='#L284'>284</a>
 <a name='L285'></a><a href='#L285'>285</a>
-<a name='L286'></a><a href='#L286'>286</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<a name='L286'></a><a href='#L286'>286</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -369,7 +369,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">12x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -626,20 +626,20 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">const { Op, fn, col, where } = <span class="cstat-no" title="statement not covered" >require('sequelize');</span>
-const { randomUUID } = <span class="cstat-no" title="statement not covered" >require('crypto');</span>
-const { getModels } = <span class="cstat-no" title="statement not covered" >require('../models');</span>
-const { formatThaiDateTime } = <span class="cstat-no" title="statement not covered" >require('../helpers/thaiDateTime');</span>
-const LOG_TYPE_IDS = <span class="cstat-no" title="statement not covered" >require('../constants/logTypeIds');</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">const { Op, fn, col, where } = require('sequelize');
+const { randomUUID } = require('crypto');
+const { getModels } = require('../models');
+const { formatThaiDateTime } = require('../helpers/thaiDateTime');
+const LOG_TYPE_IDS = require('../constants/logTypeIds');
 &nbsp;
-const CUSTOMER_AUDIT_FIELDS = <span class="cstat-no" title="statement not covered" >[</span>
+const CUSTOMER_AUDIT_FIELDS = [
   'TAX_NO',
   'REGISTERED_DATE',
   'REGISTERED_CAPITAL_AMOUNT',
@@ -654,7 +654,7 @@ const CUSTOMER_AUDIT_FIELDS = <span class="cstat-no" title="statement not covere
   'ENABLED',
 ];
 &nbsp;
-const CUSTOMER_VALUE_FIELDS = <span class="cstat-no" title="statement not covered" >CUSTOMER_AUDIT_FIELDS.filter(<span class="fstat-no" title="function not covered" >(f</span>ield) =&gt; <span class="cstat-no" title="statement not covered" >field !== 'ENABLED' &amp;&amp; field !== 'DESCRIPTION')</span>;</span>
+const CUSTOMER_VALUE_FIELDS = CUSTOMER_AUDIT_FIELDS.filter((field) =&gt; field !== 'ENABLED' &amp;&amp; field !== 'DESCRIPTION');
 &nbsp;
 function <span class="fstat-no" title="function not covered" >plainCustomer(</span>customer) {
 <span class="cstat-no" title="statement not covered" >  if (!customer) <span class="cstat-no" title="statement not covered" >return {};</span></span>
@@ -911,7 +911,7 @@ async function <span class="fstat-no" title="function not covered" >getCustomerL
 <span class="cstat-no" title="statement not covered" >  return mapCustomerLog(log, true);</span>
 }
 &nbsp;
-<span class="cstat-no" title="statement not covered" >module.exports = {</span>
+module.exports = {
   assertActiveCustomer,
   getCustomerLog,
   listCustomerLogs,
@@ -925,7 +925,7 @@ async function <span class="fstat-no" title="function not covered" >getCustomerL
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-11-14T08:24:43.824Z
+                at 2026-11-26T07:12:18.907Z
             </div>
         <script src="../../prettify.js"></script>
         <script>
