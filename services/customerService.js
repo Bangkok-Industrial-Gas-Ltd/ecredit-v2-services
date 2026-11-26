@@ -9,6 +9,12 @@ const QUICK_FILTER_SIZE_IDS = {
   L: '4b2d23db-96d6-4cef-b6ae-10a97a8ce1cb',
 };
 
+const SIZE_LABELS_BY_ID = {
+  [QUICK_FILTER_SIZE_IDS.L]: 'L (>200)',
+  [QUICK_FILTER_SIZE_IDS.M]: 'M (50-200)',
+  [QUICK_FILTER_SIZE_IDS.S]: 'S (<50)',
+};
+
 const SORT_FIELDS = {
   TAX_NO: 'TAX_NO',
   REGISTERED_DATE: 'REGISTERED_DATE',
@@ -375,7 +381,10 @@ function normalizeCustomerUpdate(payload) {
 async function listEnabledSizes() {
   const { Size } = getModels();
   const sizes = await Size.findAll({ where: { ENABLED: '1' }, order: [['SORTING', 'ASC'], ['NAME', 'ASC']] });
-  return sizes.map((size) => ({ id: size.ID, label: size.NAME }));
+  return sizes.map((size) => ({
+    id: size.ID,
+    label: SIZE_LABELS_BY_ID[String(size.ID).toLowerCase()] || size.NAME,
+  }));
 }
 
 async function searchSoldToCustomers(search, salesGroup) {
