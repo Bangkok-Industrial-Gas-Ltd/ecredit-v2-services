@@ -17,6 +17,13 @@ const SIZE_LABELS_BY_ID = {
   [QUICK_FILTER_SIZE_IDS.S]: 'S (<50)',
 };
 
+function customerSizeIdForCapital(capitalAmount) {
+  const amount = typeof capitalAmount === 'bigint' ? Number(capitalAmount) : Number(capitalAmount) || 0;
+  if (amount < MEDIUM_CUSTOMER_CAPITAL_MINIMUM) return QUICK_FILTER_SIZE_IDS.S;
+  if (amount <= LARGE_CUSTOMER_CAPITAL_MINIMUM) return QUICK_FILTER_SIZE_IDS.M;
+  return QUICK_FILTER_SIZE_IDS.L;
+}
+
 const SORT_FIELDS = {
   TAX_NO: 'TAX_NO',
   REGISTERED_DATE: 'REGISTERED_DATE',
@@ -177,12 +184,6 @@ function buildAttributes() {
 function toNumber(value) {
   const number = Number(value);
   return Number.isFinite(number) ? number : 0;
-}
-
-function customerSizeIdForCapital(capitalAmount) {
-  if (capitalAmount < MEDIUM_CUSTOMER_CAPITAL_MINIMUM) return QUICK_FILTER_SIZE_IDS.S;
-  if (capitalAmount <= LARGE_CUSTOMER_CAPITAL_MINIMUM) return QUICK_FILTER_SIZE_IDS.M;
-  return QUICK_FILTER_SIZE_IDS.L;
 }
 
 function isNonBlank(value) {
