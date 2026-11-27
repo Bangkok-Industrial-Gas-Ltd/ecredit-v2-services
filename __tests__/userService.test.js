@@ -94,7 +94,7 @@ describe('userService', () => {
     const options = findAndCountAll.mock.calls[0][0];
     const userInclude = options.include.find((include) => include.as === 'user');
     const updatedByInclude = userInclude.include.find((include) => include.as === 'updatedByEmployee');
-    expect(userInclude.where[Op.and]).toHaveLength(1);
+    expect(userInclude.where[Op.and]).toHaveLength(2);
     expect(updatedByInclude.required).toBe(true);
     expect(updatedByInclude.where[Op.and]).toHaveLength(2);
     expect(options.order).toEqual([

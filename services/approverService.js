@@ -1,5 +1,5 @@
 const { randomUUID } = require('crypto');
-const { Op, cast, col, fn, where } = require('sequelize');
+const { Op, cast, col, fn, literal, where } = require('sequelize');
 const { getModels } = require('../models');
 
 const SORT_FIELDS = {
@@ -78,7 +78,11 @@ function buildApproverWhere(query) {
     const start = new Date(`${updatedDate}T00:00:00.000Z`);
     if (!Number.isNaN(start.getTime())) {
       const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
-      filters.push({ UPDATED_DATE: { [Op.gte]: start, [Op.lt]: end } });
+      const updatedDateColumn = literal('TRY_CONVERT(datetime2, [Approver].[UPDATED_DATE])');
+      filters.push(
+        where(updatedDateColumn, { [Op.gte]: start }),
+        where(updatedDateColumn, { [Op.lt]: end }),
+      );
     }
   }
   if (active === 'active' || active === 'true') filters.push({ ENABLED: true });

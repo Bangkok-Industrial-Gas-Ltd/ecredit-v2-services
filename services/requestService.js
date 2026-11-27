@@ -80,6 +80,34 @@ function normalizeQuickFilters(value) {
   return [...new Set(filters)];
 }
 
+function normalizeUpdatedDate(value) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const date = new Date(`${value}T00:00:00.000Z`);
+    const [year, month, day] = value.split('-').map(Number);
+    return !Number.isNaN(date.getTime())
+      && date.getUTCFullYear() === year
+      && date.getUTCMonth() === month - 1
+      && date.getUTCDate() === day
+      ? date
+      : null;
+  }
+
+  const match = value.match(/^(\d{1,2}) ([A-Za-z]{3}) (\d{4})$/);
+  if (!match) return null;
+
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const month = months.findIndex((name) => name.toLowerCase() === match[2].toLowerCase());
+  if (month < 0) return null;
+
+  const date = new Date(Date.UTC(Number(match[3]), month, Number(match[1])));
+  return date.getUTCFullYear() === Number(match[3])
+    && date.getUTCMonth() === month
+    && date.getUTCDate() === Number(match[1])
+    ? date
+    : null;
+}
+
 function nonBlankName(modelAlias) {
   return where(fn('LTRIM', fn('RTRIM', col(`${modelAlias}.NAME`))), { [Op.ne]: '' });
 }
@@ -214,11 +242,15 @@ function buildWhere(query) {
   });
 
   const updatedDate = typeof query.UPDATED_DATE === 'string' ? query.UPDATED_DATE.trim() : '';
-  if (/^\d{4}-\d{2}-\d{2}$/.test(updatedDate)) {
-    const start = new Date(`${updatedDate}T00:00:00`);
-    const end = new Date(start);
-    end.setDate(end.getDate() + 1);
-    conditions.push({ UPDATED_DATE: { [Op.gte]: start, [Op.lt]: end } });
+  const updatedDateStart = normalizeUpdatedDate(updatedDate);
+  if (updatedDateStart) {
+    const end = new Date(updatedDateStart);
+    end.setUTCDate(end.getUTCDate() + 1);
+    const updatedDateColumn = literal('TRY_CONVERT(datetime2, [Request].[UPDATED_DATE])');
+    conditions.push(
+      where(updatedDateColumn, { [Op.gte]: updatedDateStart }),
+      where(updatedDateColumn, { [Op.lt]: end }),
+    );
   }
 
   const quickFilters = normalizeQuickFilters(query.quickFilter);

@@ -44,6 +44,23 @@ describe('requestService.listRequests sorting', () => {
     });
   });
 
+  it.each(['2026-11-25', '25 Nov 2026'])('filters UPDATED_DATE for the selected calendar day (%s)', async (value) => {
+    const findAndCountAll = jest.fn().mockResolvedValue({ rows: [], count: 0 });
+    getModels.mockReturnValue({ Request: { findAndCountAll }, Rating: {}, Term: {}, Status: {}, Employee: {} });
+
+    await requestService.listRequests({ UPDATED_DATE: value });
+
+    const conditions = findAndCountAll.mock.calls[0][0].where[Op.and]
+      .filter((condition) => condition.logic);
+    expect(conditions).toHaveLength(2);
+    expect(conditions.map((condition) => JSON.stringify(condition.attribute))).toEqual([
+      expect.stringContaining('TRY_CONVERT(datetime2, [Request].[UPDATED_DATE])'),
+      expect.stringContaining('TRY_CONVERT(datetime2, [Request].[UPDATED_DATE])'),
+    ]);
+    expect(conditions[0].logic[Op.gte].toISOString()).toBe('2026-11-25T00:00:00.000Z');
+    expect(conditions[1].logic[Op.lt].toISOString()).toBe('2026-11-26T00:00:00.000Z');
+  });
+
   it('orders by CREATED_DATE descending by default', async () => {
     const findAndCountAll = jest.fn().mockResolvedValue({ rows: [], count: 0 });
     getModels.mockReturnValue({

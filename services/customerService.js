@@ -83,10 +83,14 @@ function dateRangeCondition(column, value) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
     return null;
   }
-  const start = new Date(`${value}T00:00:00`);
+  const start = new Date(`${value}T00:00:00.000Z`);
   const end = new Date(start);
-  end.setDate(end.getDate() + 1);
-  return { [column]: { [Op.gte]: start, [Op.lt]: end } };
+  end.setUTCDate(end.getUTCDate() + 1);
+  const dateColumn = literal(`TRY_CONVERT(datetime2, [Customer].[${column}])`);
+  return [
+    where(dateColumn, { [Op.gte]: start }),
+    where(dateColumn, { [Op.lt]: end }),
+  ];
 }
 
 function buildWhere(query) {
@@ -132,13 +136,13 @@ function buildWhere(query) {
   const registeredDate = typeof query.REGISTERED_DATE === 'string' ? query.REGISTERED_DATE.trim() : '';
   const registeredDateCondition = dateRangeCondition('REGISTERED_DATE', registeredDate);
   if (registeredDateCondition) {
-    conditions.push(registeredDateCondition);
+    conditions.push(...registeredDateCondition);
   }
 
   const updatedDate = typeof query.UPDATED_DATE === 'string' ? query.UPDATED_DATE.trim() : '';
   const updatedDateCondition = dateRangeCondition('UPDATED_DATE', updatedDate);
   if (updatedDateCondition) {
-    conditions.push(updatedDateCondition);
+    conditions.push(...updatedDateCondition);
   }
 
   const quickFilters = normalizeQuickFilters(query.quickFilter);

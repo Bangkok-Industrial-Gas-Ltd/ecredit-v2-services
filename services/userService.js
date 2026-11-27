@@ -1,4 +1,4 @@
-const { Op, fn, QueryTypes } = require('sequelize');
+const { Op, fn, literal, where, QueryTypes } = require('sequelize');
 const { getDatabase } = require('../config/database');
 const { getModels } = require('../models');
 const {
@@ -73,12 +73,12 @@ function buildUserWhere(query) {
   if (/^\d{4}-\d{2}-\d{2}$/.test(updatedDate || '')) {
     const start = new Date(`${updatedDate}T00:00:00.000Z`);
     if (!Number.isNaN(start.getTime())) {
-      filters.push({
-        UPDATED_DATE: {
-          [Op.gte]: start,
-          [Op.lt]: new Date(start.getTime() + 24 * 60 * 60 * 1000),
-        },
-      });
+      const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+      const updatedDateColumn = literal('TRY_CONVERT(datetime2, [user].[UPDATED_DATE])');
+      filters.push(
+        where(updatedDateColumn, { [Op.gte]: start }),
+        where(updatedDateColumn, { [Op.lt]: end }),
+      );
     }
   }
 
