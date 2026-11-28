@@ -583,9 +583,74 @@ async function getRequestById(id) {
   if (!request) return null;
 
   const response = mapRequest(request);
+  const previousScoring = await findPreviousScoringValues(models, request);
+  applyPreviousScoringValues(response, previousScoring);
   response.PREVIOUS_REF_FINANCIAL_STATEMENT_FY = await findPreviousFinancialStatementYear(models.Request, request);
   response.COMPANY_CODE = await getCompanyCode(response.SOLD_TO, response.SOLD_ID);
   return response;
+}
+
+async function findPreviousScoringValues({ Request, Rating }, currentRequest) {
+  const customerConditions = [];
+  const customerNo = typeof currentRequest.SOLD_TO === 'string' ? currentRequest.SOLD_TO.trim() : '';
+  const taxId = typeof currentRequest.CUSTOMER_TAX_NO === 'string' ? currentRequest.CUSTOMER_TAX_NO.trim() : '';
+
+  if (customerNo && customerNo !== '-') customerConditions.push({ SOLD_TO: customerNo });
+  if (taxId && taxId !== '-') customerConditions.push({ CUSTOMER_TAX_NO: taxId });
+  if (!customerConditions.length) return null;
+
+  const previousRequest = await Request.findOne({
+    attributes: [
+      'SCORING_PROFITABILITY', 'SCORING_GROWTH', 'SCORING_LIQUIDITY', 'SCORING_LEVERAGE',
+      'SCORING_RATING_ID',
+    ],
+    where: {
+      ENABLED: true,
+      ID: { [Op.ne]: currentRequest.ID },
+      [Op.or]: customerConditions,
+    },
+    order: [['CREATED_DATE', 'DESC']],
+    raw: true,
+  });
+
+  if (!previousRequest) return null;
+
+  const scoringRating = previousRequest.SCORING_RATING_ID
+    ? await Rating.findOne({
+      attributes: ['NAME'],
+      where: { ID: previousRequest.SCORING_RATING_ID, ENABLED: '1' },
+      raw: true,
+    })
+    : null;
+
+  return {
+    profitability: previousRequest.SCORING_PROFITABILITY,
+    growth: previousRequest.SCORING_GROWTH,
+    liquidity: previousRequest.SCORING_LIQUIDITY,
+    leverage: previousRequest.SCORING_LEVERAGE,
+    ratingId: previousRequest.SCORING_RATING_ID,
+    rating: scoringRating?.NAME || '',
+  };
+}
+
+function applyPreviousScoringValues(response, previousScoring) {
+  if (!previousScoring) return;
+
+  const values = [
+    ['EXISTING_PROFITABILITY', previousScoring.profitability],
+    ['EXISTING_GROWTH', previousScoring.growth],
+    ['EXISTING_LIQUIDITY', previousScoring.liquidity],
+    ['EXISTING_LEVERAGE', previousScoring.leverage],
+  ];
+  values.forEach(([field, value]) => {
+    if ((response[field] === '-' || response[field] === '') && value !== null && value !== undefined) {
+      response[field] = String(value);
+    }
+  });
+  if (!response.EXISTING_RATING && previousScoring.rating) {
+    response.EXISTING_RATING = previousScoring.rating;
+    response.EXISTING_RATING_ID = previousScoring.ratingId || '';
+  }
 }
 
 async function findPreviousFinancialStatementYear(Request, currentRequest) {

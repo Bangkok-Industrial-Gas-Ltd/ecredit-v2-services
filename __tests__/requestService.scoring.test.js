@@ -5,10 +5,89 @@ jest.mock('../config/database', () => ({ getDatabase: jest.fn() }));
 jest.mock('../services/attachmentService', () => ({}));
 
 const { getModels } = require('../models');
+const { getDatabase } = require('../config/database');
 const requestService = require('../services/requestService');
 
 describe('requestService scoring classification', () => {
   const draftStatusId = 'db8b3768-8466-4974-8dff-4c374b16a639';
+
+  test('uses the latest previous request scoring as Existing values', async () => {
+    const currentRequest = {
+      ID: 'request-new',
+      SOLD_TO: 'customer-1',
+      CUSTOMER_TAX_NO: '1234567890123',
+      EXISTING_PROFITABILITY: null,
+      EXISTING_GROWTH: null,
+      EXISTING_LIQUIDITY: null,
+      EXISTING_LEVERAGE: null,
+      EXISTING_RATING_ID: null,
+      SCORING_PROFITABILITY: '8',
+      SCORING_GROWTH: '4',
+      SCORING_LIQUIDITY: '24',
+      SCORING_LEVERAGE: '20',
+      SCORING_RATING_ID: 'new-rating',
+      existingRating: null,
+      requestedRating: null,
+      proposedRating: null,
+      approvedRating: null,
+      requestedTerm: null,
+      proposedTerm: null,
+      approvedTerm: null,
+      status: null,
+      sapStatus: null,
+      requestedByEmployee: null,
+      updatedByEmployee: null,
+      REQUESTED_LIMIT_AMOUNT: 0,
+      PROPOSED_LIMIT_AMOUNT: null,
+      APPROVED_LIMIT_AMOUNT: 0,
+      CUSTOMER_REGISTERED_CAPITAL_AMOUNT: '0',
+    };
+    const previousRequest = {
+      SCORING_PROFITABILITY: '18',
+      SCORING_GROWTH: '18',
+      SCORING_LIQUIDITY: '17',
+      SCORING_LEVERAGE: '17',
+      SCORING_RATING_ID: 'previous-rating',
+    };
+    const models = {
+      Request: {
+        findOne: jest.fn()
+          .mockResolvedValueOnce(currentRequest)
+          .mockResolvedValueOnce(previousRequest)
+        ,
+      },
+      Rating: {
+        findOne: jest.fn().mockResolvedValue({ NAME: 'B (Medium)' }),
+      },
+      Term: {},
+      Status: {},
+      Employee: {},
+    };
+    getModels.mockReturnValue(models);
+    getDatabase.mockReturnValue({ query: jest.fn().mockResolvedValue([]) });
+
+    const result = await requestService.getRequestById('request-new');
+
+    expect(result).toEqual(expect.objectContaining({
+      EXISTING_PROFITABILITY: '18',
+      EXISTING_GROWTH: '18',
+      EXISTING_LIQUIDITY: '17',
+      EXISTING_LEVERAGE: '17',
+      EXISTING_RATING: 'B (Medium)',
+      EXISTING_RATING_ID: 'previous-rating',
+    }));
+    expect(models.Request.findOne).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      where: expect.objectContaining({
+        ID: { [require('sequelize').Op.ne]: 'request-new' },
+        [require('sequelize').Op.or]: [
+          { SOLD_TO: 'customer-1' },
+          { CUSTOMER_TAX_NO: '1234567890123' },
+        ],
+      }),
+      order: [['CREATED_DATE', 'DESC']],
+      raw: true,
+    }));
+  });
 
   test('assigns A when the four scoring values total more than 90', async () => {
     const request = { update: jest.fn().mockResolvedValue(undefined) };
