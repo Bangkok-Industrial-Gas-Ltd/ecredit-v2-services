@@ -590,6 +590,14 @@ async function getRequestById(id) {
   return response;
 }
 
+// "Existing" must only look back in time: a request can never borrow scoring or a
+// reference FY from a request created later than itself. SQL Server rejects implicit
+// string<->datetime comparisons for some locales, so the column is explicitly converted
+// (same TRY_CONVERT pattern used elsewhere in this file for date filtering).
+function createdOnOrBeforeCondition(createdDate) {
+  return where(literal('TRY_CONVERT(datetime2, [Request].[CREATED_DATE])'), { [Op.lte]: createdDate });
+}
+
 async function findPreviousScoringValues({ Request, Rating }, currentRequest) {
   const customerConditions = [];
   const customerNo = typeof currentRequest.SOLD_TO === 'string' ? currentRequest.SOLD_TO.trim() : '';
@@ -599,16 +607,21 @@ async function findPreviousScoringValues({ Request, Rating }, currentRequest) {
   if (taxId && taxId !== '-') customerConditions.push({ CUSTOMER_TAX_NO: taxId });
   if (!customerConditions.length) return null;
 
+  const previousScoringConditions = [
+    { ENABLED: true },
+    { ID: { [Op.ne]: currentRequest.ID } },
+    { [Op.or]: customerConditions },
+  ];
+  if (currentRequest.CREATED_DATE) {
+    previousScoringConditions.push(createdOnOrBeforeCondition(currentRequest.CREATED_DATE));
+  }
+
   const previousRequest = await Request.findOne({
     attributes: [
       'SCORING_PROFITABILITY', 'SCORING_GROWTH', 'SCORING_LIQUIDITY', 'SCORING_LEVERAGE',
       'SCORING_RATING_ID',
     ],
-    where: {
-      ENABLED: true,
-      ID: { [Op.ne]: currentRequest.ID },
-      [Op.or]: customerConditions,
-    },
+    where: { [Op.and]: previousScoringConditions },
     order: [['CREATED_DATE', 'DESC']],
     raw: true,
   });
@@ -669,13 +682,19 @@ async function findPreviousFinancialStatementYear(Request, currentRequest) {
     : '';
   if (!/^\d{13}$/.test(taxId)) return null;
 
+  const previousFyConditions = [
+    { CUSTOMER_TAX_NO: taxId },
+    { ENABLED: true },
+    { ID: { [Op.ne]: currentRequest.ID } },
+  ];
+  // Same look-back-only rule as scoring: never borrow a later request's FY.
+  if (currentRequest.CREATED_DATE) {
+    previousFyConditions.push(createdOnOrBeforeCondition(currentRequest.CREATED_DATE));
+  }
+
   const previousRequest = await Request.findOne({
     attributes: ['REF_FINANCIAL_STATEMENT_FY'],
-    where: {
-      CUSTOMER_TAX_NO: taxId,
-      ENABLED: true,
-      ID: { [Op.ne]: currentRequest.ID },
-    },
+    where: { [Op.and]: previousFyConditions },
     order: [['CREATED_DATE', 'DESC']],
     raw: true,
   });

@@ -77,13 +77,18 @@ describe('requestService scoring classification', () => {
       EXISTING_RATING_ID: 'previous-rating',
     }));
     expect(models.Request.findOne).toHaveBeenNthCalledWith(2, expect.objectContaining({
-      where: expect.objectContaining({
-        ID: { [require('sequelize').Op.ne]: 'request-new' },
-        [require('sequelize').Op.or]: [
-          { SOLD_TO: 'customer-1' },
-          { CUSTOMER_TAX_NO: '1234567890123' },
+      where: {
+        [require('sequelize').Op.and]: [
+          { ENABLED: true },
+          { ID: { [require('sequelize').Op.ne]: 'request-new' } },
+          {
+            [require('sequelize').Op.or]: [
+              { SOLD_TO: 'customer-1' },
+              { CUSTOMER_TAX_NO: '1234567890123' },
+            ],
+          },
         ],
-      }),
+      },
       order: [['CREATED_DATE', 'DESC']],
       raw: true,
     }));
@@ -150,6 +155,81 @@ describe('requestService scoring classification', () => {
       EXISTING_GROWTH: '18',
       EXISTING_LIQUIDITY: '17',
       EXISTING_LEVERAGE: '17',
+    }));
+  });
+
+  test('never backfills Existing from a request created later than the current one', async () => {
+    const currentCreatedDate = new Date('2022-12-09T00:00:00.000Z');
+    const currentRequest = {
+      ID: 'request-oldest',
+      SOLD_TO: '110001256',
+      CUSTOMER_TAX_NO: '-',
+      CREATED_DATE: currentCreatedDate,
+      EXISTING_PROFITABILITY: null,
+      EXISTING_GROWTH: null,
+      EXISTING_LIQUIDITY: null,
+      EXISTING_LEVERAGE: null,
+      EXISTING_RATING_ID: null,
+      SCORING_PROFITABILITY: '-',
+      SCORING_GROWTH: '-',
+      SCORING_LIQUIDITY: '-',
+      SCORING_LEVERAGE: '-',
+      SCORING_RATING_ID: '',
+      existingRating: null,
+      requestedRating: null,
+      proposedRating: null,
+      approvedRating: null,
+      requestedTerm: null,
+      proposedTerm: null,
+      approvedTerm: null,
+      status: null,
+      sapStatus: null,
+      requestedByEmployee: null,
+      updatedByEmployee: null,
+      REQUESTED_LIMIT_AMOUNT: 0,
+      PROPOSED_LIMIT_AMOUNT: null,
+      APPROVED_LIMIT_AMOUNT: 0,
+      CUSTOMER_REGISTERED_CAPITAL_AMOUNT: '0',
+    };
+    const models = {
+      Request: {
+        // No row satisfies CREATED_DATE <= currentCreatedDate for this customer,
+        // so the lookup correctly returns null even though later requests exist.
+        findOne: jest.fn()
+          .mockResolvedValueOnce(currentRequest)
+          .mockResolvedValueOnce(null),
+      },
+      Rating: { findOne: jest.fn() },
+      Term: {},
+      Status: {},
+      Employee: {},
+    };
+    getModels.mockReturnValue(models);
+    getDatabase.mockReturnValue({ query: jest.fn().mockResolvedValue([]) });
+
+    const result = await requestService.getRequestById('request-oldest');
+
+    expect(result).toEqual(expect.objectContaining({
+      EXISTING_PROFITABILITY: '-',
+      EXISTING_GROWTH: '-',
+      EXISTING_LIQUIDITY: '-',
+      EXISTING_LEVERAGE: '-',
+    }));
+    const { Op } = require('sequelize');
+    const secondCallWhere = models.Request.findOne.mock.calls[1][0].where;
+    const conditions = secondCallWhere[Op.and];
+    expect(conditions).toEqual(expect.arrayContaining([
+      { ENABLED: true },
+      { ID: { [Op.ne]: 'request-oldest' } },
+      { [Op.or]: [{ SOLD_TO: '110001256' }] },
+    ]));
+    const createdDateCondition = conditions.find((condition) => condition?.logic?.[Op.lte]);
+    expect(createdDateCondition).toBeDefined();
+    expect(JSON.stringify(createdDateCondition.attribute)).toContain('TRY_CONVERT(datetime2, [Request].[CREATED_DATE])');
+    expect(createdDateCondition.logic[Op.lte]).toBe(currentCreatedDate);
+    expect(models.Request.findOne.mock.calls[1][0]).toEqual(expect.objectContaining({
+      order: [['CREATED_DATE', 'DESC']],
+      raw: true,
     }));
   });
 
