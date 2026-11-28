@@ -89,6 +89,70 @@ describe('requestService scoring classification', () => {
     }));
   });
 
+  test('backfills Existing values when the current request already stores a placeholder "0"', async () => {
+    const currentRequest = {
+      ID: 'request-new',
+      SOLD_TO: '110001363',
+      CUSTOMER_TAX_NO: '0115546006888',
+      EXISTING_PROFITABILITY: '0',
+      EXISTING_GROWTH: '0',
+      EXISTING_LIQUIDITY: '0',
+      EXISTING_LEVERAGE: '0',
+      EXISTING_RATING_ID: null,
+      SCORING_PROFITABILITY: '8',
+      SCORING_GROWTH: '4',
+      SCORING_LIQUIDITY: '24',
+      SCORING_LEVERAGE: '20',
+      SCORING_RATING_ID: 'new-rating',
+      existingRating: null,
+      requestedRating: null,
+      proposedRating: null,
+      approvedRating: null,
+      requestedTerm: null,
+      proposedTerm: null,
+      approvedTerm: null,
+      status: null,
+      sapStatus: null,
+      requestedByEmployee: null,
+      updatedByEmployee: null,
+      REQUESTED_LIMIT_AMOUNT: 0,
+      PROPOSED_LIMIT_AMOUNT: null,
+      APPROVED_LIMIT_AMOUNT: 0,
+      CUSTOMER_REGISTERED_CAPITAL_AMOUNT: '0',
+    };
+    const previousRequest = {
+      SCORING_PROFITABILITY: '18',
+      SCORING_GROWTH: '18',
+      SCORING_LIQUIDITY: '17',
+      SCORING_LEVERAGE: '17',
+      SCORING_RATING_ID: 'previous-rating',
+    };
+    const models = {
+      Request: {
+        findOne: jest.fn()
+          .mockResolvedValueOnce(currentRequest)
+          .mockResolvedValueOnce(previousRequest),
+      },
+      Rating: {
+        findOne: jest.fn().mockResolvedValue({ NAME: 'B (Medium)' }),
+      },
+      Term: {},
+      Status: {},
+      Employee: {},
+    };
+    getModels.mockReturnValue(models);
+    getDatabase.mockReturnValue({ query: jest.fn().mockResolvedValue([]) });
+
+    const result = await requestService.getRequestById('request-new');
+
+    expect(result).toEqual(expect.objectContaining({
+      EXISTING_PROFITABILITY: '18',
+      EXISTING_GROWTH: '18',
+      EXISTING_LIQUIDITY: '17',
+      EXISTING_LEVERAGE: '17',
+    }));
+  });
+
   test('assigns A when the four scoring values total more than 90', async () => {
     const request = { update: jest.fn().mockResolvedValue(undefined) };
     const models = {

@@ -633,6 +633,16 @@ async function findPreviousScoringValues({ Request, Rating }, currentRequest) {
   };
 }
 
+// The UI treats a stored "0" the same as "no value" (see displayExistingScoringValue
+// in request-detail.component.ts), so a lingering "0" must not block backfilling the
+// Existing score from the latest matching previous request.
+function isExistingScoreMissing(value) {
+  const trimmed = String(value ?? '').trim();
+  if (trimmed === '' || trimmed === '-') return true;
+  const numeric = Number(trimmed);
+  return Number.isFinite(numeric) && numeric === 0;
+}
+
 function applyPreviousScoringValues(response, previousScoring) {
   if (!previousScoring) return;
 
@@ -643,7 +653,7 @@ function applyPreviousScoringValues(response, previousScoring) {
     ['EXISTING_LEVERAGE', previousScoring.leverage],
   ];
   values.forEach(([field, value]) => {
-    if ((response[field] === '-' || response[field] === '') && value !== null && value !== undefined) {
+    if (isExistingScoreMissing(response[field]) && value !== null && value !== undefined) {
       response[field] = String(value);
     }
   });
